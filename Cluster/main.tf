@@ -1,56 +1,56 @@
 provider "aws" {
-  region = "eu-west-1"
+  region = "eu-north-1"
 }
 
-resource "aws_vpc" "shubham_vpc" {
+resource "aws_vpc" "ken_vpc" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "shubham-vpc"
+    Name = "ken-vpc"
   }
 }
 
-resource "aws_subnet" "shubham_subnet" {
-  count = 2
-  vpc_id                  = aws_vpc.shubham_vpc.id
-  cidr_block              = cidrsubnet(aws_vpc.shubham_vpc.cidr_block, 8, count.index)
-  availability_zone       = element(["eu-west-1a", "eu-west-1b"], count.index)
+resource "aws_subnet" "ken_subnet" {
+  count                   = 2
+  vpc_id                  = aws_vpc.ken_vpc.id
+  cidr_block              = cidrsubnet(aws_vpc.ken_vpc.cidr_block, 8, count.index)
+  availability_zone       = element(["eu-north-1a", "eu-north-1b"], count.index)
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "shubham-subnet-${count.index}"
+    Name = "ken-subnet-${count.index}"
   }
 }
 
-resource "aws_internet_gateway" "shubham_igw" {
-  vpc_id = aws_vpc.shubham_vpc.id
+resource "aws_internet_gateway" "ken_igw" {
+  vpc_id = aws_vpc.ken_vpc.id
 
   tags = {
-    Name = "shubham-igw"
+    Name = "ken-igw"
   }
 }
 
-resource "aws_route_table" "shubham_route_table" {
-  vpc_id = aws_vpc.shubham_vpc.id
+resource "aws_route_table" "ken_route_table" {
+  vpc_id = aws_vpc.ken_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.shubham_igw.id
+    gateway_id = aws_internet_gateway.ken_igw.id
   }
 
   tags = {
-    Name = "shubham-route-table"
+    Name = "ken-route-table"
   }
 }
 
 resource "aws_route_table_association" "a" {
   count          = 2
-  subnet_id      = aws_subnet.shubham_subnet[count.index].id
-  route_table_id = aws_route_table.shubham_route_table.id
+  subnet_id      = aws_subnet.ken_subnet[count.index].id
+  route_table_id = aws_route_table.ken_route_table.id
 }
 
-resource "aws_security_group" "shubham_cluster_sg" {
-  vpc_id = aws_vpc.shubham_vpc.id
+resource "aws_security_group" "ken_cluster_sg" {
+  vpc_id = aws_vpc.ken_vpc.id
 
   egress {
     from_port   = 0
@@ -60,12 +60,12 @@ resource "aws_security_group" "shubham_cluster_sg" {
   }
 
   tags = {
-    Name = "shubham-cluster-sg"
+    Name = "ken-cluster-sg"
   }
 }
 
-resource "aws_security_group" "shubham_node_sg" {
-  vpc_id = aws_vpc.shubham_vpc.id
+resource "aws_security_group" "ken_node_sg" {
+  vpc_id = aws_vpc.ken_vpc.id
 
   ingress {
     from_port   = 0
@@ -82,25 +82,25 @@ resource "aws_security_group" "shubham_node_sg" {
   }
 
   tags = {
-    Name = "shubham-node-sg"
+    Name = "ken-node-sg"
   }
 }
 
-resource "aws_eks_cluster" "shubham" {
-  name     = "shubham-cluster"
-  role_arn = aws_iam_role.shubham_cluster_role.arn
+resource "aws_eks_cluster" "ken" {
+  name     = "ken-cluster"
+  role_arn = aws_iam_role.ken_cluster_role.arn
 
   vpc_config {
-    subnet_ids         = aws_subnet.shubham_subnet[*].id
-    security_group_ids = [aws_security_group.shubham_cluster_sg.id]
+    subnet_ids         = aws_subnet.ken_subnet[*].id
+    security_group_ids = [aws_security_group.ken_cluster_sg.id]
   }
 }
 
-resource "aws_eks_node_group" "shubham" {
-  cluster_name    = aws_eks_cluster.shubham.name
-  node_group_name = "shubham-node-group"
-  node_role_arn   = aws_iam_role.shubham_node_group_role.arn
-  subnet_ids      = aws_subnet.shubham_subnet[*].id
+resource "aws_eks_node_group" "ken" {
+  cluster_name    = aws_eks_cluster.ken.name
+  node_group_name = "ken-node-group"
+  node_role_arn   = aws_iam_role.ken_node_group_role.arn
+  subnet_ids      = aws_subnet.ken_subnet[*].id
 
   scaling_config {
     desired_size = 2
@@ -111,13 +111,13 @@ resource "aws_eks_node_group" "shubham" {
   instance_types = ["t3.small"]
 
   remote_access {
-    ec2_ssh_key = var.ssh_key_name
-    source_security_group_ids = [aws_security_group.shubham_node_sg.id]
+    ec2_ssh_key               = var.ssh_key_name
+    source_security_group_ids = [aws_security_group.ken_node_sg.id]
   }
 }
 
-resource "aws_iam_role" "shubham_cluster_role" {
-  name = "shubham-cluster-role"
+resource "aws_iam_role" "ken_cluster_role" {
+  name = "ken-cluster-role"
 
   assume_role_policy = <<EOF
 {
@@ -135,13 +135,13 @@ resource "aws_iam_role" "shubham_cluster_role" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "shubham_cluster_role_policy" {
-  role       = aws_iam_role.shubham_cluster_role.name
+resource "aws_iam_role_policy_attachment" "ken_cluster_role_policy" {
+  role       = aws_iam_role.ken_cluster_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
-resource "aws_iam_role" "shubham_node_group_role" {
-  name = "shubham-node-group-role"
+resource "aws_iam_role" "ken_node_group_role" {
+  name = "ken-node-group-role"
 
   assume_role_policy = <<EOF
 {
@@ -159,17 +159,17 @@ resource "aws_iam_role" "shubham_node_group_role" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "shubham_node_group_role_policy" {
-  role       = aws_iam_role.shubham_node_group_role.name
+resource "aws_iam_role_policy_attachment" "ken_node_group_role_policy" {
+  role       = aws_iam_role.ken_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
-resource "aws_iam_role_policy_attachment" "shubham_node_group_cni_policy" {
-  role       = aws_iam_role.shubham_node_group_role.name
+resource "aws_iam_role_policy_attachment" "ken_node_group_cni_policy" {
+  role       = aws_iam_role.ken_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-resource "aws_iam_role_policy_attachment" "shubham_node_group_registry_policy" {
-  role       = aws_iam_role.shubham_node_group_role.name
+resource "aws_iam_role_policy_attachment" "ken_node_group_registry_policy" {
+  role       = aws_iam_role.ken_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
